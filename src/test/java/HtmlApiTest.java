@@ -1,6 +1,6 @@
 import Utils.CustomVisitor;
 import Utils.Student;
-import XsdToJavaAPI.Html5Xsd2JavaApi.*;
+import XsdToJavaAPI.HtmlApi.*;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -8,59 +8,32 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 public class HtmlApiTest {
-
-    //TODO Ver a lógica de ter mais do que um tipo possivel para um dado attributo.
-    //TODO Verificar se existe mais alguma coisa de errado com as restrições
-    //TODO Existem atributos que por vezes tem tipo e outras vezes não tem. Dois attributos diferentes?
-
-    //TODO Accept deveria receber um Visitor<T>
 
     @Test
     public void testGeneratedClassesIntegrity() throws Exception {
         Html root = new Html();
 
         root.head()
-                .meta("metaId1")
-                .title("titleId1")
-                .link("linkId1")
-                .link("linkId2");
-
-        root.<Title>child("titleId1")
-                .text("Title");
-
-        root.<Meta>child("metaId1")
-                .addAttrCharset("UTF-8");
-
-        root.<Link>child("linkId1")
-                //.addAttrRel(new AttrRel<>("icon"))
-                .addAttrType("text/css")
-                .addAttrHref("/assets/images/favicon.png");
-
-        root.<Link>child("linkId2")
-                //.addAttrRel(new AttrRel<>("stylesheet"))
-                .addAttrType("text/css")
-                .addAttrHref("/assets/styles/main.css");
-
-        root.body()
-                .addAttrClass("clear")
+                .meta().attrCharset("UTF-8").<Head>$()
+                .title()
+                    .text("Title").<Head>$()
+                .link().attrType(Enumtype.TEXT_CSS).attrHref("/assets/images/favicon.png").<Head>$()
+                .link().attrType(Enumtype.TEXT_CSS).attrHref("/assets/styles/main.css").<Head>$().<Html>$()
+            .body().attrClass("clear")
                 .div()
-                .header()
-                .section()
-                .div("divId1")
-                .aside("asideId1");
-
-        root.<Div>child("divId1")
-                .img()
-                .addAttrId("brand")
-                .addAttrSrc("./assets/images/logo.png");
-
-        root.<Aside>child("asideId1")
-                .em()
-                .text("Advertisement")
-                .span()
-                .text("1-833-2GET-REV");
+                    .header()
+                        .section()
+                            .div()
+                                .img().attrId("brand").attrSrc("./assets/images/logo.png").<Div>$()
+                                .aside()
+                                    .em()
+                                        .text("Advertisement")
+                                    .span()
+                                        .text("1-833-2GET-REV");
     }
 
     /**
@@ -74,37 +47,7 @@ public class HtmlApiTest {
      */
     @Test
     public void testRestrictionSuccess(){
-        new AttrRel<>("Help");
-    }
-
-    /**
-     *  <xsd:restriction base="xsd:NMTOKEN">
-             <xsd:enumeration value="Alternate" />
-             <xsd:enumeration value="Appendix" />
-             <xsd:enumeration value="Bookmark" />
-             <xsd:enumeration value="Chapter" />
-             <xsd:enumeration value="Contents" />
-             <xsd:enumeration value="Copyright" />
-             <xsd:enumeration value="Glossary" />
-             <xsd:enumeration value="Help" />
-             <xsd:enumeration value="Index" />
-             <xsd:enumeration value="Next" />
-             <xsd:enumeration value="Prev" />
-             <xsd:enumeration value="Section" />
-             <xsd:enumeration value="Start" />
-             <xsd:enumeration value="Stylesheet" />
-             <xsd:enumeration value="Subsection" />
-     *  </xsd:restriction>
-     *
-     *  This attribute creation should fail because the value "Help1" isn't a possible value for the Rel attribute.
-     */
-    @Test
-    public void testRestrictionFailure(){
-        try {
-            new AttrRel<>("Help1");
-
-            Assert.fail();
-        } catch (RestrictionViolationException ignored){ }
+        new AttrRel(Enumrel.HELP);
     }
 
     /**
@@ -120,7 +63,7 @@ public class HtmlApiTest {
 
         CustomVisitor customVisitor = new CustomVisitor();
 
-        String expected = "<Html>\n<Body>\n<Div>\nThis is a regular String.\r\n</Div>\n</Body>\n</Html>\n";
+        String expected = "<html>\n<body>\n<div>\nThis is a regular String.\r\n</div>\n</body>\n</html>\n";
 
         Assert.assertTrue(customVisitPrintAssert(customVisitor, rootDoc, expected));
     }
@@ -134,16 +77,74 @@ public class HtmlApiTest {
 
         rootDoc.body()
                 .div()
-                .text(Student::getName);
+                .text(Student::getName)
+                .text(Student::getNumber);
 
-        CustomVisitor<Student> customVisitor = new CustomVisitor<>(new Student("Luís"));
+        CustomVisitor<Student> customVisitor = new CustomVisitor<>(new Student("Luís", 123));
 
-        String expected = "<Html>\n<Body>\n<Div>\nLuís\r\n</Div>\n</Body>\n</Html>\n";
+        String expected = "<html>\n<body>\n<div>" +
+                            "\nLuís\r\n123\r\n" +
+                          "</div>\n</body>\n</html>\n";
 
         Assert.assertTrue(customVisitPrintAssert(customVisitor, rootDoc, expected));
     }
 
-    boolean customVisitPrintAssert(CustomVisitor customVisitor, Html rootDoc, String expected){
+    @Test
+    public void testBinderUsage(){
+        List<String> tdValues1 = new ArrayList<>();
+        List<String> tdValues2 = new ArrayList<>();
+
+        tdValues1.add("val1");
+        tdValues1.add("val2");
+        tdValues1.add("val3");
+
+        tdValues2.add("val4");
+        tdValues2.add("val5");
+        tdValues2.add("val6");
+
+        Html root = new Html();
+
+        root.body()
+                .table()
+                    .<List<String>>binder((elem, list) ->
+                            list.forEach(tdValue ->
+                                    elem.tr().td().text(tdValue)
+                            )
+                    ).<Body>$()
+                .div();
+
+        CustomVisitor<List<String>> customVisitor1 = new CustomVisitor<>(tdValues1);
+
+        String expected1 = "<html>\n<body>\n<table>\n" +
+                                "<tr>\n<td>\nval1\r\n</td>\n</tr>\n" +
+                                "<tr>\n<td>\nval2\r\n</td>\n</tr>\n" +
+                                "<tr>\n<td>\nval3\r\n</td>\n</tr>\n" +
+                            "</table>\n<div>\n</div>\n</body>\n</html>\n";
+
+        Assert.assertTrue(customVisitPrintAssert(customVisitor1, root, expected1));
+
+        CustomVisitor<List<String>> customVisitor2 = new CustomVisitor<>(tdValues2);
+
+        String expected2 = "<html>\n<body>\n<table>\n" +
+                                "<tr>\n<td>\nval4\r\n</td>\n</tr>\n" +
+                                "<tr>\n<td>\nval5\r\n</td>\n</tr>\n" +
+                                "<tr>\n<td>\nval6\r\n</td>\n</tr>\n" +
+                            "</table>\n<div>\n</div>\n</body>\n</html>\n";
+
+        Assert.assertTrue(customVisitPrintAssert(customVisitor2, root, expected2));
+    }
+
+    @Test
+    public void testAttributeName(){
+        Assert.assertEquals("class", new AttrClass(null).getName());
+    }
+
+    @Test
+    public void testElementName(){
+        Assert.assertEquals("html", new Html().getName());
+    }
+
+    private boolean customVisitPrintAssert(CustomVisitor customVisitor, Html rootDoc, String expected){
         boolean result = false;
 
         try {

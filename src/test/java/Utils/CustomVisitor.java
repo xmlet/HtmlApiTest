@@ -1,11 +1,12 @@
 package Utils;
 
-import XsdToJavaAPI.Html5Xsd2JavaApi.AbstractVisitor;
-import XsdToJavaAPI.Html5Xsd2JavaApi.Html;
-import XsdToJavaAPI.Html5Xsd2JavaApi.IElement;
-import XsdToJavaAPI.Html5Xsd2JavaApi.Text;
+import XsdToJavaAPI.HtmlApi.AbstractVisitor;
+import XsdToJavaAPI.HtmlApi.Html;
+import XsdToJavaAPI.HtmlApi.IElement;
+import XsdToJavaAPI.HtmlApi.Text;
 
 import java.io.PrintStream;
+import java.util.List;
 
 public class CustomVisitor<R> extends AbstractVisitor<R> {
 
@@ -32,6 +33,15 @@ public class CustomVisitor<R> extends AbstractVisitor<R> {
     @Override
     public <T extends IElement> void initVisit(IElement<T> element) {
         printStream.printf("<%s>\n", element.getName());
+
+        if(element.isBound()) {
+            element.cloneElem()
+                    .bindTo(model)
+                    .getChildren()
+                    .forEach((IElement child) ->
+                        child.accept(this)
+                    );
+        }
     }
 
     @Override
@@ -40,7 +50,7 @@ public class CustomVisitor<R> extends AbstractVisitor<R> {
     }
 
     @Override
-    public void initVisit(Text<R> text){
+    public <U> void initVisit(Text<R, U> text){
         String textValue = text.getValue();
 
         if (textValue != null){
@@ -55,7 +65,7 @@ public class CustomVisitor<R> extends AbstractVisitor<R> {
     }
 
     @Override
-    public void endVisit(Text<R> text) {
+    public <U> void endVisit(Text<R, U> text) {
 
     }
 }
