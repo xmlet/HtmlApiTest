@@ -1,16 +1,18 @@
-import Utils.CustomVisitor;
-import Utils.Student;
-import XsdToJavaAPI.HtmlApi.*;
+package org.xmlet.htmlapitest;
+
+import org.xmlet.htmlapi.*;
+import org.xmlet.htmlapitest.utils.CustomVisitor;
+import org.xmlet.htmlapitest.utils.Student;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
-import java.lang.Object;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class HtmlApiTest {
 
@@ -19,22 +21,53 @@ public class HtmlApiTest {
         Html<Html> root = new Html<>();
 
         root.head()
-                .meta().attrCharset("UTF-8").$()
+                .meta().attrCharset("UTF-8").º()
                 .title()
-                    .text("Title").$()
-                .link().attrType(Enumtype.TEXT_CSS).attrHref("/assets/images/favicon.png").$()
-                .link().attrType(Enumtype.TEXT_CSS).attrHref("/assets/styles/main.css").$().$()
+                    .text("Title").º()
+                .link().attrType(Enumtype.TEXT_CSS).attrHref("/assets/images/favicon.png").º()
+                .link().attrType(Enumtype.TEXT_CSS).attrHref("/assets/styles/main.css").º().º()
             .body().attrClass("clear")
                 .div()
                     .header()
                         .section()
                             .div()
-                                .img().attrId("brand").attrSrc("./assets/images/logo.png").<Div>$()
+                                .img().attrId("brand").attrSrc("./assets/images/logo.png").º()
                                 .aside()
                                     .em()
                                         .text("Advertisement")
                                     .span()
                                         .text("1-833-2GET-REV");
+    }
+
+    @Test
+    public void testFind() throws Exception {
+        Html<Html> root = new Html<>();
+
+        Div<Section<Header<Div<Body<Html<Html>>>>>> div = root.head()
+                                                            .meta().attrCharset("UTF-8").º()
+                                                            .title()
+                                                                 .text("Title").º()
+                                                            .link().attrType(Enumtype.TEXT_CSS).attrHref("/assets/images/favicon.png").º()
+                                                            .link().attrType(Enumtype.TEXT_CSS).attrHref("/assets/styles/main.css").º().º()
+                                                            .body().attrClass("clear")
+                                                                .div()
+                                                                    .header()
+                                                                        .section()
+                                                                            .div();
+
+        div.img().attrId("brand").attrSrc("./assets/images/logo.png").º()
+           .aside()
+                .em()
+                    .text("Advertisement")
+                .span()
+                    .text("1-833-2GET-REV");
+
+        List<Div> result = root.<Div>find(child ->
+            child instanceof Div && child.º() instanceof Section
+        ).collect(Collectors.toList());
+
+        Assert.assertEquals(1, result.size());
+        Assert.assertEquals(div, result.get(0));
     }
 
     /**
@@ -105,28 +138,31 @@ public class HtmlApiTest {
 
         Html<Html> root = new Html<>();
 
-        root.body()
-                .table()
-                    .<List<String>>binder((elem, list) ->
-                            list.forEach(tdValue ->
-                                    elem.tr().td().text(tdValue)
-                            )
-                    ).$()
-                .div();
+        Table<Body<Html<Html>>> table = root.body().table();
+        table.tr().th().text("Title");
+        table.<List<String>>binder((elem, list) ->
+                         list.forEach(tdValue ->
+                                 elem.tr().td().text(tdValue)
+                         )
+                 ).º()
+             .div();
 
         CustomVisitor<List<String>> customVisitor1 = new CustomVisitor<>(tdValues1);
 
         String expected1 = "<html>\n<body>\n<table>\n" +
+                                "<tr>\n<th>\nTitle\r\n</th>\n</tr>\n" +
                                 "<tr>\n<td>\nval1\r\n</td>\n</tr>\n" +
                                 "<tr>\n<td>\nval2\r\n</td>\n</tr>\n" +
                                 "<tr>\n<td>\nval3\r\n</td>\n</tr>\n" +
                             "</table>\n<div>\n</div>\n</body>\n</html>\n";
 
         Assert.assertTrue(customVisitPrintAssert(customVisitor1, root, expected1));
+        Assert.assertTrue(customVisitPrintAssert(customVisitor1, root, expected1));
 
         CustomVisitor<List<String>> customVisitor2 = new CustomVisitor<>(tdValues2);
 
         String expected2 = "<html>\n<body>\n<table>\n" +
+                                "<tr>\n<th>\nTitle\r\n</th>\n</tr>\n" +
                                 "<tr>\n<td>\nval4\r\n</td>\n</tr>\n" +
                                 "<tr>\n<td>\nval5\r\n</td>\n</tr>\n" +
                                 "<tr>\n<td>\nval6\r\n</td>\n</tr>\n" +
@@ -149,9 +185,17 @@ public class HtmlApiTest {
     public void testAttributeCreation(){
         Html root = new Html();
 
-        root.addAttr(new Attribute<>("toto", "tutu"));
+        root.addAttr(new BaseAttribute<>("toto", "tutu"));
 
         Assert.assertEquals(1, root.getAttributes().size());
+    }
+
+    @Test
+    public void testTextExceptions(){
+        try {
+            new Text<>(new Html(), "dummy").addAttr(new AttrHref(""));
+            Assert.fail();
+        } catch (UnsupportedOperationException ignored){}
     }
 
     private boolean customVisitPrintAssert(CustomVisitor customVisitor, Html rootDoc, String expected){

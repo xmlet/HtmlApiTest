@@ -1,14 +1,14 @@
-package Utils;
+package org.xmlet.htmlapitest.utils;
 
-import XsdToJavaAPI.HtmlApi.AbstractVisitor;
-import XsdToJavaAPI.HtmlApi.Html;
-import XsdToJavaAPI.HtmlApi.IElement;
-import XsdToJavaAPI.HtmlApi.Text;
+import org.xmlet.htmlapi.AbstractElementVisitor;
+import org.xmlet.htmlapi.Element;
+import org.xmlet.htmlapi.Html;
+import org.xmlet.htmlapi.Text;
 
 import java.io.PrintStream;
 import java.util.List;
 
-public class CustomVisitor<R> extends AbstractVisitor<R> {
+public class CustomVisitor<R> extends AbstractElementVisitor<R> {
 
     private R model;
     private PrintStream DEFAULT_PRINT_STREAM = new PrintStream(System.out);
@@ -31,26 +31,21 @@ public class CustomVisitor<R> extends AbstractVisitor<R> {
     }
 
     @Override
-    public <T extends IElement> void initVisit(IElement<T, ?> element) {
+    public <T extends Element> void visit(Element<T, ?> element) {
         printStream.printf("<%s>\n", element.getName());
 
         if(element.isBound()) {
-            element.cloneElem()
-                    .bindTo(model)
-                    .getChildren()
-                    .forEach( child ->
-                        ((IElement) child).accept(this)
-                    );
+            List<Element> children = element.cloneElem().bindTo(model).getChildren();
+            children.forEach( child -> child.accept(this));
+        } else {
+            element.getChildren().forEach(item -> item.accept(this));
         }
-    }
 
-    @Override
-    public <T extends IElement> void endVisit(IElement<T, ?> element) {
         printStream.printf("</%s>\n", element.getName());
     }
 
     @Override
-    public <U> void initVisit(Text<R, U, ?> text){
+    public <U> void visit(Text<R, U, ?> text){
         String textValue = text.getValue();
 
         if (textValue != null){
@@ -64,8 +59,4 @@ public class CustomVisitor<R> extends AbstractVisitor<R> {
         }
     }
 
-    @Override
-    public <U> void endVisit(Text<R, U, ?> text) {
-
-    }
 }
