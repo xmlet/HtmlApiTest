@@ -6,10 +6,7 @@ import org.xmlet.htmlapi.*;
 import org.xmlet.htmlapitest.utils.CustomVisitor;
 import org.xmlet.htmlapitest.utils.Student;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.lang.Object;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -18,9 +15,11 @@ import java.lang.reflect.Modifier;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
+import java.util.jar.JarEntry;
+import java.util.jar.JarInputStream;
 import java.util.stream.Collectors;
 
 public class HtmlApiTest {
@@ -112,7 +111,7 @@ public class HtmlApiTest {
 
         CustomVisitor customVisitor = new CustomVisitor();
 
-        String expected = "<html>\n<body>\n<div>\nThis is a regular String.\r\n</div>\n</body>\n</html>\n";
+        String expected = "<html>\n<body>\n<div>\nThis is a regular String.\n</div>\n</body>\n</html>\n";
 
         Assert.assertTrue(customVisitPrintAssert(customVisitor, rootDoc, expected));
     }
@@ -129,10 +128,10 @@ public class HtmlApiTest {
                 .text(Student::getName)
                 .text(Student::getNumber);
 
-        CustomVisitor<Student> customVisitor = new CustomVisitor<>(new Student("Luís", 123));
+        CustomVisitor<Student> customVisitor = new CustomVisitor<>(new Student("Luis", 123));
 
         String expected = "<html>\n<body>\n<div>" +
-                            "\nLuís\r\n123\r\n" +
+                            "\nLuis\n123\n" +
                           "</div>\n</body>\n</html>\n";
 
         Assert.assertTrue(customVisitPrintAssert(customVisitor, rootDoc, expected));
@@ -165,10 +164,10 @@ public class HtmlApiTest {
         CustomVisitor<List<String>> customVisitor1 = new CustomVisitor<>(tdValues1);
 
         String expected1 = "<html>\n<body>\n<table>\n" +
-                                "<tr>\n<th>\nTitle\r\n</th>\n</tr>\n" +
-                                "<tr>\n<td>\nval1\r\n</td>\n</tr>\n" +
-                                "<tr>\n<td>\nval2\r\n</td>\n</tr>\n" +
-                                "<tr>\n<td>\nval3\r\n</td>\n</tr>\n" +
+                                "<tr>\n<th>\nTitle\n</th>\n</tr>\n" +
+                                "<tr>\n<td>\nval1\n</td>\n</tr>\n" +
+                                "<tr>\n<td>\nval2\n</td>\n</tr>\n" +
+                                "<tr>\n<td>\nval3\n</td>\n</tr>\n" +
                             "</table>\n<div>\n</div>\n</body>\n</html>\n";
 
         Assert.assertTrue(customVisitPrintAssert(customVisitor1, root, expected1));
@@ -177,10 +176,10 @@ public class HtmlApiTest {
         CustomVisitor<List<String>> customVisitor2 = new CustomVisitor<>(tdValues2);
 
         String expected2 = "<html>\n<body>\n<table>\n" +
-                                "<tr>\n<th>\nTitle\r\n</th>\n</tr>\n" +
-                                "<tr>\n<td>\nval4\r\n</td>\n</tr>\n" +
-                                "<tr>\n<td>\nval5\r\n</td>\n</tr>\n" +
-                                "<tr>\n<td>\nval6\r\n</td>\n</tr>\n" +
+                                "<tr>\n<th>\nTitle\n</th>\n</tr>\n" +
+                                "<tr>\n<td>\nval4\n</td>\n</tr>\n" +
+                                "<tr>\n<td>\nval5\n</td>\n</tr>\n" +
+                                "<tr>\n<td>\nval6\n</td>\n</tr>\n" +
                             "</table>\n<div>\n</div>\n</body>\n</html>\n";
 
         Assert.assertTrue(customVisitPrintAssert(customVisitor2, root, expected2));
@@ -373,17 +372,19 @@ public class HtmlApiTest {
 
         try {
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-            PrintStream printStream = new PrintStream(buffer, false, "utf-8");
+            DataOutputStream dataOutputStream = new DataOutputStream(buffer);
+            BufferedOutputStream bos = new BufferedOutputStream(dataOutputStream);
 
-            customVisitor.setPrintStream(printStream);
+            customVisitor.setBufferedOutputStream(bos);
             rootDoc.accept(customVisitor);
+            bos.flush();
 
-            String content = new String(buffer.toByteArray(), StandardCharsets.UTF_8);
+            String content = new String(buffer.toByteArray());
 
             result = expected.equals(content);
 
-            printStream.close();
-        } catch (UnsupportedEncodingException e) {
+            dataOutputStream.close();
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
